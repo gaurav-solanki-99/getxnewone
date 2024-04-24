@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:newone/ApiFlof/ApiEndPoint.dart';
@@ -7,7 +9,8 @@ import 'package:newone/FloFGetX/Network/ApiServices.dart';
 import 'package:newone/FloFGetX/Session/MyStorageClass.dart';
 
 import 'LoginModel.dart';
-
+import 'package:image_cropper/image_cropper.dart';
+import 'package:image_picker/image_picker.dart';
 class FloFScreen extends StatefulWidget {
   const FloFScreen({Key? key}) : super(key: key);
 
@@ -17,7 +20,7 @@ class FloFScreen extends StatefulWidget {
 
 class _FloFScreenState extends State<FloFScreen> {
 
-
+  File? _imageFile;
   @override
   void initState() {
     // TODO: implement initState
@@ -42,6 +45,46 @@ class _FloFScreenState extends State<FloFScreen> {
 
 
   }
+
+
+
+  Future<void> pickCameraImage(ImageSource camera) async {
+    final imageFile = await ImagePicker().pickImage(source: ImageSource.camera);
+
+    if (imageFile != null) {
+      setState(() {
+        _imageFile = File(imageFile.path);
+      });
+
+
+    //  _cropImage(_imageFile!.path);
+    }
+  }
+
+  _cropImage(filePath) async {
+    await ImageCropper.platform
+        .cropImage(
+        sourcePath: filePath,
+        aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1))
+        .then((value) {
+          setState(() {
+            _imageFile = File(value!.path);
+          });
+
+      print("Image Path>>>" + _imageFile.toString());
+    });
+  }
+
+  /// Get from gallery
+  _getFromGallery(ImageSource gallery) async {
+    XFile? pickedFile = (await ImagePicker.platform.getImage(
+      source: ImageSource.gallery,
+      maxWidth: 1800,
+      maxHeight: 1800,
+    ));
+
+    _cropImage(pickedFile!.path);
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,6 +92,30 @@ class _FloFScreenState extends State<FloFScreen> {
       body: Center(
         child: Column(
           children: [
+            Container(
+             height: 120,
+             width: 120,
+              child: Column(
+                children: [
+              _imageFile==null?Container():
+                  Image.file(
+                    _imageFile!,
+                    height: 120,
+                    width: 120,
+                  )
+
+
+                ],
+              ),
+            ),
+
+            SizedBox(height: 10,),
+            InkWell(
+                onTap: () async {
+
+                  pickCameraImage(ImageSource.camera);
+                }, child: Mywidget.mybutton("Take Photo")),
+            SizedBox(height: 10,),
             InkWell(
             onTap: () async {
               
@@ -101,6 +168,23 @@ class _FloFScreenState extends State<FloFScreen> {
                   }
 
                 }, child: Mywidget.mybutton("Get Profile")),
+            SizedBox(height: 10,),
+            InkWell(
+                onTap: () async {
+                  var result = await MyApiService.multipart(ApiEndPoint.updateProfilePicture,{
+                  'first_name': 'Gaurav',
+                  'last_name': 'solanki',
+                  'display_name': 'Gaurav',
+                  },_imageFile,MyApiService.getAllHeaders());
+
+                  if(result!=null)
+                  {
+                    print("Api Result Login "+result!.toString());
+                    print("RESULT : $result");
+                  }
+
+
+                }, child: Mywidget.mybutton("Edit Profile")),
           ],
         )
       ),
